@@ -1,5 +1,5 @@
 import psycopg2
-from typing import Any
+
 
 def create_list_vacs(employer_ids) -> list:
     '''
@@ -20,7 +20,9 @@ def create_list_vacs(employer_ids) -> list:
         })
     return data
 
+
 def create_list_comps(companies):
+    ''' Метод преобразования полученных данных по компаниям '''
     data = []
     for company in companies:
         data.append({
@@ -31,106 +33,79 @@ def create_list_comps(companies):
         })
     return data
 
+
 def create_database(database_name: str, params: dict):
     ''' Метод создания БД '''
     conn = psycopg2.connect(dbname='postgres', **params)
     conn.autocommit = True  # каждый sql-запрос будет коммититься
     cur = conn.cursor()
-
-    try: #IF EXISTS может попробовать это вставить?
-        cur.execute(f'DROP DATABASE {database_name}')
-    except Exception as error_inform:
-        return error_inform
-    finally:
-        cur.execute(f'CREATE DATABASE {database_name}')
-
+    cur.execute(f'DROP DATABASE IF EXISTS {database_name}')
+    cur.execute(f'CREATE DATABASE {database_name}')
     cur.close()
     conn.close()
+
 
 def create_tables(database_name: str, params: dict) -> None:
     ''' Метод создания таблицы в БД '''
     conn = psycopg2.connect(dbname=database_name, **params)
-
     with conn.cursor() as cur:
         cur.execute("""
                 CREATE TABLE vacancies (
                     company_id VARCHAR(50),
                     company_name VARCHAR(100),
-                    vacation_title TEXT,
+                    vacancy_title TEXT,
                     city VARCHAR(100),
                     salary_from INTEGER,
                     salary_to INTEGER,
-                    link TEXT
+                    link_on TEXT
                     );
                 CREATE TABLE companies (
                     company_id VARCHAR(50),
                     company_name VARCHAR(100),
                     vacancies_url TEXT,
                     open_vacancies INTEGER
-                    );   
+                    );
             """)
-
     conn.commit()
     conn.close()
+
 
 def save_to_table_vacs(data: list[dict], database_name: str, params: dict) -> None:
     ''' Метод заполнения таблицы БД '''
     conn = psycopg2.connect(dbname=database_name, **params)
-
     with conn.cursor() as cur:
         for item in data:
-            print("Processing item:", item)
             cur.execute(
                 """
                 INSERT INTO vacancies VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
                 (item.get('company_id'),
                  item.get('company_name'),
-                 item.get('vacation_title'),
-                 item.get('city'),
-                 item.get('salary_from'),
-                 item.get('salary_to'),
+                 item.get('vac_title'),
+                 item.get('vac_city'),
+                 item.get('vac_salary_from'),
+                 item.get('vac_salary_to'),
                  item.get('link'))
             )
-
     conn.commit()
     conn.close()
+
 
 def save_to_table_comps(data: list[dict], database_name: str, params: dict) -> None:
     ''' Метод заполнения таблицы компании БД '''
     conn = psycopg2.connect(dbname=database_name, **params)
-
     with conn.cursor() as cur:
         for item in data:
             cur.execute(
                 """
-                INSERT INTO companies 
-                (company_id, company_name, vacancies_url, open_vacancies) 
+                INSERT INTO companies
+                (company_id, company_name, vacancies_url, open_vacancies)
                 VALUES (%s, %s, %s, %s)
                 """,
                 (item.get('company_id'),
-                    item.get('company_name'),
-                    item.get('vacancies_url'),
-                    item.get('open_vacancies'))
+                 item.get('company_name'),
+                 item.get('vacancies_url'),
+                 item.get('open_vacancies'))
             )
     conn.commit()
     conn.close()
-'''
-(
-                    item.get('company_id'),
-                    item.get('company_name'),
-                    item.get('vacation_title'),
-                    item.get('city'),
-                    item.get('salary_from'),
-                    item.get('salary_to'),
-                    item.get('link'))
-            )
-            
-                    item['company_id'],
-                    item['company_name'],
-                    item['vacation_title'],
-                    item['city'],
-                    item['salary_from'],
-                    item['salary_to'],
-                    item['link'])
-'''
